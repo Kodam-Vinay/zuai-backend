@@ -1,10 +1,44 @@
-const PostModel = require("../db/models/postModel");
+require("dotenv").config();
+const cloudinary = require("cloudinary").v2;
 const { v4: uniqueId } = require("uuid");
+const fs = require("fs");
+const PostModel = require("../db/models/postModel");
+const { sendPostDetails, CLOUDINARY_CONFIG } = require("../utils/constants");
+
+const uploadImage = async (req, res, next) => {
+  try {
+    const image = req.file;
+    cloudinary.config({
+      ...CLOUDINARY_CONFIG,
+    });
+    const uploadImage = await cloudinary.uploader.upload(image.path, {
+      public_id: uniqueId(),
+      resource_type: "image",
+      upload_preset: process.env.CLOUDINARY_PRESET,
+    });
+    if (uploadImage?.public_id) {
+      fs.unlinkSync(image?.path);
+      return res.send({
+        status: true,
+        message: "image upload successfully",
+        data: {
+          image: uploadImage?.public_id?.slice(11),
+        },
+      });
+    } else {
+      fs.unlinkSync(image?.path);
+      return res
+        .status(500)
+        .json({ status: false, message: "Failed to upload image" });
+    }
+  } catch (error) {
+    res.status(400).send({ status: false, message: "Something Went Wrong" });
+  }
+};
 
 const uploadPost = async (req, res) => {
   try {
     const { userDetails } = req.user;
-    console.log(userDetails);
     const { title, content, image } = req.body;
     if (!title || !content) {
       return res
@@ -22,7 +56,6 @@ const uploadPost = async (req, res) => {
       .status(201)
       .send({ status: true, message: "Post created successfully" });
   } catch (error) {
-    console.log(error.message);
     res.status(400).send({ status: false, message: "Something Went Wrong" });
   }
 };
@@ -36,11 +69,14 @@ const getAllPosts = async (req, res) => {
         { content: { $regex: search_q, $options: "i" } },
       ],
     }); //search query
+
+    const sendPosts = posts?.map((eachPost) => sendPostDetails(eachPost));
+
     res.status(200).send({
       status: true,
       message: "Posts Retrived Successful",
       data: {
-        posts,
+        posts: sendPosts,
       },
     });
   } catch (error) {
@@ -51,14 +87,15 @@ const getAllPosts = async (req, res) => {
 const getPostDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const posts = await PostModel.findOne({
+    const findPost = await PostModel.findOne({
       post_id: id,
     });
+    const postDetails = sendPostDetails(findPost);
     res.status(200).send({
       status: true,
       message: "Posts Retrived Successful",
       data: {
-        posts,
+        post: postDetails,
       },
     });
   } catch (error) {
@@ -68,6 +105,7 @@ const getPostDetails = async (req, res) => {
 
 const updatePost = async (req, res) => {
   try {
+    const { userDetails } = req.user;
     const requests = req.body;
     const { id } = req.params;
     if (!id) {
@@ -95,6 +133,12 @@ const updatePost = async (req, res) => {
       return res
         .status(400)
         .send({ status: false, message: "Fields Should Not Be Empty" });
+    }
+
+    if (requests?.post_id || requests?._id) {
+      return res
+        .status(400)
+        .send({ status: false, message: "Post id cannot be updated" });
     }
 
     //checking request properties are valid
@@ -176,4 +220,5 @@ module.exports = {
   getPostDetails,
   updatePost,
   deletePost,
+  uploadImage,
 };

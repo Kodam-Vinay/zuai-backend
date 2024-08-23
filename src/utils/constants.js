@@ -1,9 +1,18 @@
 require("dotenv").config();
 const { sign, verify } = require("jsonwebtoken");
 const { hash, genSalt } = require("bcrypt");
-const userModel = require("../db/models/userModel");
+const { v4: uniqueId } = require("uuid");
+const multer = require("multer");
+const path = require("path");
+
+CLOUDINARY_CONFIG = {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET_KEY,
+};
+
 const generateToken = async ({ userDetails }) => {
-  return await sign(userDetails, process.env.JWT_SECRET_KEY);
+  return await sign({ userDetails }, process.env.JWT_SECRET_KEY);
 };
 
 const makeHashText = async (text) => {
@@ -49,23 +58,41 @@ const generateRandomNumber = () => {
         Math.floor(Math.random() * alphabatesAndSymbols.length)
       ];
   }
-  console.log(number);
   return number;
 };
 
 const generateUserId = (name) => {
   const randomNumber = generateRandomNumber();
-  const userId = name + "_" + randomNumber;
-  const checkUserIdExist = userModel.findOne({
-    user_id: userId,
-  });
-  if (!checkUserIdExist) {
-    return userId;
-  }
+  return (userId = name + "_" + randomNumber);
 };
+
+const sendPostDetails = (post) => {
+  return {
+    post_id: post.post_id,
+    title: post.title,
+    content: post.content,
+    author: post.author,
+    image: post.image,
+    published_date: post?.createdAt,
+  };
+};
+
+const STORAGE = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.resolve(__dirname, "../uploads");
+    return cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    return cb(null, `${uniqueId()}${file.originalname}`);
+  },
+});
+
 module.exports = {
   generateToken,
   makeHashText,
   authorizeUser,
   generateUserId,
+  sendPostDetails,
+  CLOUDINARY_CONFIG,
+  STORAGE,
 };

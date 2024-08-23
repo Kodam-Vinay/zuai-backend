@@ -38,7 +38,7 @@ const register = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      user_id: generateUserId(),
+      user_id: generateUserId(name),
     });
     const user = await newUser.save();
 

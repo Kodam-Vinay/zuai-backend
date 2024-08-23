@@ -1,14 +1,24 @@
 const express = require("express");
+const multer = require("multer");
+
 const {
   uploadPost,
   getAllPosts,
   getPostDetails,
   updatePost,
   deletePost,
+  uploadImage,
 } = require("../controllers/postController");
-const { authorizeUser } = require("../utils/constants");
+const { authorizeUser, STORAGE } = require("../utils/constants");
 const router = express.Router();
+const upload = multer({ storage: STORAGE });
 
+router.post(
+  "/upload_image",
+  upload.single("image"),
+  authorizeUser,
+  uploadImage
+);
 router.post("/", authorizeUser, uploadPost);
 router.get("/", getAllPosts);
 router.get("/:id", getPostDetails);
