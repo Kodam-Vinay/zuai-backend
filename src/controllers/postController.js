@@ -18,9 +18,9 @@ const uploadImage = async (req, res, next) => {
     });
     if (uploadImage?.public_id) {
       fs.unlinkSync(image?.path);
-      return res.send({
+      return res.status(200).send({
         status: true,
-        message: "image upload successfully",
+        message: "image upload successfull",
         data: {
           image: uploadImage?.public_id?.slice(11),
         },
@@ -49,7 +49,7 @@ const uploadPost = async (req, res) => {
       title,
       content,
       author: userDetails?.user_id,
-      image: image ? image : "DUMMY_POST_LOGO",
+      image: image ? image : "",
       post_id: uniqueId(),
     });
     res
@@ -90,6 +90,9 @@ const getPostDetails = async (req, res) => {
     const findPost = await PostModel.findOne({
       post_id: id,
     });
+    if (!findPost) {
+      return res.status(404).send({ status: false, message: "Post Not Found" });
+    }
     const postDetails = sendPostDetails(findPost);
     res.status(200).send({
       status: true,

@@ -14,7 +14,7 @@ const router = express.Router();
 const upload = multer({ storage: STORAGE });
 
 router.post(
-  "/upload_image",
+  "/upload-image",
   upload.single("image"),
   authorizeUser,
   uploadImage
